@@ -4,24 +4,33 @@ import java.rmi.server.*;
 import java.net.*;
 
 public class Process extends UnicastRemoteObject implements ProcessInterface {
-    String ID;
-    String[] neighborID;
-    String[] elected;
+    public String ID;
+    public String[] neighborID;
+    public String[] elected;
 
-    int PORT = 9990;
+    public Registry registry;
+    public int port;
 
-    Registry registry = LocateRegistry.createRegistry(PORT);
 
-
-    public Process(String ID) throws RemoteException{
+    public Process(String ID, String[] neighborID) throws RemoteException{
+        System.setSecurityManager(new RMISecuritymanager());
         this.ID = ID;
+        this.neighborID = neighborID;
+        this.port = 9990
 
         try {
+            Naming.rebind("rmi://localhost/"+this.ID, this);
         } catch(Exception e){throw new RemoteException("can't get inet address.");}
     }
 
     public void Election(String callerID) throws RemoteException{
-        System.out.print("Me han llamado :O");
+        System.out.print("Estoy Llamando !!");
+        //Esto se DEBE hacer por cada vecino
+        try {
+            ProcessInterface neighborRmi = (ProcessInterface)(Naming.lookup("rmi://localhost/"+neighborID));
+            neighborRmi.Election(ID);
+        } catch (Exception e){e.printStackTrace();}
+
     }
 
 }
