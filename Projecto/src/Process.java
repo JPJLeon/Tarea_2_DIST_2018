@@ -11,15 +11,13 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
     public Registry registry;
     public int port;
 
-
+    //Inicializador, se crea el servidor RMI de este proceso.
     public Process(String ID, String[] neighborID) throws RemoteException{
-        System.setSecurityManager(new RMISecuritymanager());
         this.ID = ID;
         this.neighborID = neighborID;
-        this.port = 9990
 
         try {
-            Naming.rebind("rmi://localhost/"+this.ID, this);
+            Naming.rebind("rmi://127.0.0.1/"+this.ID, this);
         } catch(Exception e){throw new RemoteException("can't get inet address.");}
     }
 
