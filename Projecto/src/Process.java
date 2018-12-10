@@ -4,48 +4,37 @@ import java.rmi.server.*;
 import java.net.*;
 
 public class Process extends UnicastRemoteObject implements ProcessInterface {
-    public int ID;
-    public int[] neighborID = -1;
-    public int neighborMaxID;
-    public boolean elected;
-    public boolean echoing;
-    public int maxID = -1;
+    public String ID;
+    public String[] neighborID;
+    public String[] elected;
 
-    private ProcessInterface[] neighborRMI;
+    public static Registry registry;
 
     //Inicializador, se crea el servidor RMI de este proceso.
-    public Process(int ID, int[] neighborID) throws Exception{
+    public Process(String ID, String[] neighborID, int port) throws RemoteException{
         super();
         this.ID = ID;
         this.neighborID = neighborID;
-        int port = 1200 + ID;
         try{
             LocateRegistry.createRegistry(port);
-            Naming.rebind(String.valueOf(ID),this);
+            Naming.rebind(ID, this);
         } catch (Exception e){e.printStackTrace();}
-        System.out.print("Proceso nuevo creado :)\n");
+        System.out.print("Proceso nuvo creado :)\n");
     }
 
-    //Election no esta terminado, no usar.
-    public void Election(int callerMaxID, int callerID) throws Exception{
-        if (!elected || callerMaxID > this.maxID){
-            elected = true;
-            if (callerMaxID > this.maxID){
-                this.maxID = callerMaxID;
+    public void Election(String callerID) throws RemoteException{
+        //Esto se DEBE hacer por cada vecino
+        try {
+            if (neighborID != null) {
+                System.out.print(this.ID + ": Estoy Llamando !!\n");
+                ProcessInterface neighborRmi = (ProcessInterface) (Naming.lookup(neighborID[0]));
+                neighborRmi.Election(this.ID);
+            } else {
+                System.out.print(this.ID + ": No tengo vecinos - "+callerID+"\n");
             }
-            for (int i = 0; i < neighborID.length; i++) {
-                if (neighborID[i] == callerID) {
-                    continue;
-                }
-                System.out.print(this.ID + ": Estoy llamando a "+neighborID[i]+"!!\n");
-                ProcessInterface neighborRmi = (ProcessInterface) (Naming.lookup(String.valueOf(neighborID[i])));
-                neighborRmi.Election(this.maxID, this.ID);
-            }
-        } else {
-            System.out.print(this.ID + "Creo que el coord. es "+this.maxID+"\n");
-        }
-    }
+        } catch (Exception e){e.printStackTrace();}
 
+    }
 
 }
 
