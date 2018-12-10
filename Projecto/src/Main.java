@@ -2,6 +2,7 @@ import java.rmi.*;
 
 public class Main {
     public static void main(String[] args){
+        //Otorga todos los permisos al proceso
         System.setProperty("java.security.policy", "policy");
         int[] neigh1 = {2,6};
         int[] neigh2 = {1,2};
@@ -15,6 +16,13 @@ public class Main {
 
             process2.Election(6, 6, 6);
 
-        } catch (Exception e){e.printStackTrace();}
+            //Representante
+            if(process1.ID == 20){
+
+                System.out.print("");
+            }
+        } catch(Exception e){
+            e.printStackTrace();
+        }
     }
 }

@@ -15,6 +15,7 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
 
     //Inicializador, se crea el servidor RMI de este proceso.
     public Process(int ID, int[] neighborID) throws Exception{
+        //Llamada al constructor y los metodos de la clase base (UnicastRemoteObject)
         super();
         this.ID = ID;
         this.maxID = ID;
@@ -68,9 +69,6 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
         } else {
             System.out.print(this.ID + "Creo que el coord. es "+this.maxID+"\n");
         }
-    }*/
-
-
 }
 
 
