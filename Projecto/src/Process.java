@@ -8,25 +8,30 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
     public String[] neighborID;
     public String[] elected;
 
-    public Registry registry;
-    public int port;
+    public static Registry registry;
 
     //Inicializador, se crea el servidor RMI de este proceso.
-    public Process(String ID, String[] neighborID) throws RemoteException{
+    public Process(String ID, String[] neighborID, int port) throws RemoteException{
+        super();
         this.ID = ID;
         this.neighborID = neighborID;
-
-        try {
-            Naming.rebind("rmi://127.0.0.1/"+this.ID, this);
-        } catch(Exception e){throw new RemoteException("can't get inet address.");}
+        try{
+            LocateRegistry.createRegistry(port);
+            Naming.rebind(ID, this);
+        } catch (Exception e){e.printStackTrace();}
+        System.out.print("Proceso nuvo creado :)\n");
     }
 
     public void Election(String callerID) throws RemoteException{
-        System.out.print("Estoy Llamando !!");
         //Esto se DEBE hacer por cada vecino
         try {
-            ProcessInterface neighborRmi = (ProcessInterface)(Naming.lookup("rmi://localhost/"+neighborID));
-            neighborRmi.Election(ID);
+            if (neighborID != null) {
+                System.out.print(this.ID + ": Estoy Llamando !!\n");
+                ProcessInterface neighborRmi = (ProcessInterface) (Naming.lookup(neighborID[0]));
+                neighborRmi.Election(this.ID);
+            } else {
+                System.out.print(this.ID + ": No tengo vecinos - "+callerID+"\n");
+            }
         } catch (Exception e){e.printStackTrace();}
 
     }
