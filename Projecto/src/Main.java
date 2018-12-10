@@ -2,6 +2,7 @@ import java.rmi.*;
 
 public class Main {
     public static void main(String[] args){
+        //Otorga todos los permisos al proceso
         System.setProperty("java.security.policy", "policy");
 
         String[] neigh1 = {"21"};
@@ -13,6 +14,13 @@ public class Main {
 
             process1.Election(null);
 
-        } catch (Exception e){e.printStackTrace();}
+            //Representante
+            if(process1.ID == "20"){
+
+                System.out.print("");
+            }
+        } catch(Exception e){
+            e.printStackTrace();
+        }
     }
 }

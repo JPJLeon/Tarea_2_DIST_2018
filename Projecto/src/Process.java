@@ -10,15 +10,18 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
 
     public static Registry registry;
 
-    //Inicializador, se crea el servidor RMI de este proceso.
+    //Constructor, crea el servidor RMI de este proceso.
     public Process(String ID, String[] neighborID, int port) throws RemoteException{
+        //Llamada al constructor y los metodos de la clase base (UnicastRemoteObject)
         super();
         this.ID = ID;
         this.neighborID = neighborID;
         try{
             LocateRegistry.createRegistry(port);
             Naming.rebind(ID, this);
-        } catch (Exception e){e.printStackTrace();}
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
         System.out.print("Proceso nuvo creado :)\n");
     }
 
@@ -32,7 +35,9 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
             } else {
                 System.out.print(this.ID + ": No tengo vecinos - "+callerID+"\n");
             }
-        } catch (Exception e){e.printStackTrace();}
+        } catch(Exception e) {
+            e.printStackTrace();
+        }
 
     }
 
