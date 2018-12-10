@@ -5,7 +5,7 @@ import java.net.*;
 
 public class Process extends UnicastRemoteObject implements ProcessInterface {
     public int ID;
-    public int[] neighborID = -1;
+    public int[] neighborID;
     public int neighborMaxID;
     public boolean elected;
     public boolean echoing;
