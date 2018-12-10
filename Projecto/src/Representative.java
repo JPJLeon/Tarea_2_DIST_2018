@@ -2,6 +2,6 @@ import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.*;
 
-public class Representative implements InterfaceServer{
+public class Representative{
 
 }
