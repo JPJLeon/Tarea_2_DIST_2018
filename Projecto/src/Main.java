@@ -4,18 +4,17 @@ public class Main {
     public static void main(String[] args){
         //Otorga todos los permisos al proceso
         System.setProperty("java.security.policy", "policy");
-        int[] neigh1 = {21};
-        int[] neigh2 = {20,22};
-        int[] neigh3 = {21};
+        int[] neigh1 = {2,6};
+        int[] neigh2 = {1,2};
+        int[] neigh3 = {6,1};
 
         try {
-            System.out.print(java.net.InetAddress.getLocalHost().getHostAddress());
-            Process process1 = new Process(20,neigh1);
+            System.out.print(java.net.InetAddress.getLocalHost().getHostAddress()+"\n");
+            Process process1 = new Process(1,neigh1);
+            Process process2 = new Process(6,neigh2);
+            Process process3 = new Process(2,neigh3);
 
-            //Process process2 = new Process(21,neigh2);
-            //Process process3 = new Process(22,neigh3);
-
-            //process2.Election(0, process2.ID);
+            process2.Election(6, 6, 6);
 
             //Representante
             if(process1.ID == 20){
