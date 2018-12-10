@@ -1,15 +1,17 @@
-import java.rmi.Naming;
+import java.rmi.*;
 
 public class Main {
     public static void main(String[] args){
-        if (System.getSecurityManager() == null) {
-            System.setSecurityManager(new SecurityManager());
-        }
-        System.out.print("Hola");
+        System.setProperty("java.security.policy", "policy");
+
         String[] neigh1 = {"21"};
+        String[] neigh2 = {"20","22"};
         try {
-            Process process1 = new Process("20", neigh1);
-            Process process2 = new Process("21", new String[0]);
+            System.out.print(java.net.InetAddress.getLocalHost().getHostAddress());
+            Process process1 = new Process("20", neigh1,1099);
+            Process process2 = new Process("21",null,1110);
+
+            process1.Election(null);
 
         } catch (Exception e){e.printStackTrace();}
     }
