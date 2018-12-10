@@ -4,32 +4,56 @@ import java.rmi.server.*;
 import java.net.*;
 
 public class Process extends UnicastRemoteObject implements ProcessInterface {
-    public int ID;
-    public int[] neighborID = -1;
-    public int neighborMaxID;
-    public boolean elected;
-    public boolean echoing;
-    public int maxID = -1;
+    private int ID;
+    private boolean elected;
+    private boolean echoing;
+    private int maxID = -1;
+    public int maxIDcounter = 0;
 
+    public int[] neighborID;
     private ProcessInterface[] neighborRMI;
 
     //Inicializador, se crea el servidor RMI de este proceso.
     public Process(int ID, int[] neighborID) throws Exception{
         super();
         this.ID = ID;
+        this.maxID = ID;
         this.neighborID = neighborID;
         int port = 1200 + ID;
         try{
-            LocateRegistry.createRegistry(port);
+            //LocateRegistry.createRegistry(port);
             Naming.rebind(String.valueOf(ID),this);
         } catch (Exception e){e.printStackTrace();}
-        System.out.print("Proceso nuevo creado :)\n");
+        System.out.print("Proceso "+ID+" nuevo creado\n");
     }
 
-    //Election no esta terminado, no usar.
-    public void Election(int callerMaxID, int callerID) throws Exception{
-        if (!elected || callerMaxID > this.maxID){
+    //ELECTION NO ESTA TERMINADA; NO USAR.
+    //Algoritmo de mensajes de exploracion/eleccion.
+    public void Election(int callerMaxID, int callerID, int initID) throws Exception {
+        if (callerMaxID > this.maxID){
+            //Llego un nuevo maximo.
+            this.maxID = callerMaxID;
+        }
+        if (!elected) {
             elected = true;
+            //Construimos las interfaces de los vecinos y las guardamos para later use.
+            neighborRMI = new ProcessInterface[neighborID.length];
+            for (int i = 0; i < neighborID.length; i++) {
+                neighborRMI[i] = (ProcessInterface) Naming.lookup(String.valueOf(neighborID[i]));
+                //No llamare a quien me llamo.
+                if (neighborID[i] == callerID){
+                    continue;
+                }
+                System.out.print(this.ID+": Mandando mensajes con MaxID" + this.maxID+"\n");
+                neighborRMI[i].Election(this.maxID, this.ID, this.ID);
+            }
+            elected = true;
+        } else if (elected){
+
+        }
+    }
+
+        /*    elected = true;
             if (callerMaxID > this.maxID){
                 this.maxID = callerMaxID;
             }
@@ -44,10 +68,12 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
         } else {
             System.out.print(this.ID + "Creo que el coord. es "+this.maxID+"\n");
         }
-    }
+    }*/
 
 
 }
+
+
 
 
 
