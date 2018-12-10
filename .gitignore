@@ -5,3 +5,4 @@ Projecto/.idea/workspace.xml
 Projecto/.idea/*.xml
 Projecto/out/production/Projecto/*.class
 Projecto/out/production/Projecto/*.java
+*.xml
