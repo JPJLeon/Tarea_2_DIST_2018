@@ -1,6 +1,7 @@
 import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.*;
+
 import java.net.*;
 
 public class Process extends UnicastRemoteObject implements ProcessInterface {
@@ -8,7 +9,7 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
     private int ID;
     private boolean elected;
     private boolean echoing;
-    private int maxID = -1;
+    public int maxID = -1;
     public int maxIDcounter = 0;
 
     public int[] neighborID;
@@ -25,57 +26,50 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
         try {
             LocateRegistry.createRegistry(port);
             Naming.rebind(String.valueOf(ID), this);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
         System.out.print("Proceso " + ID + " nuevo creado\n");
+    }
+
+    public void lookForNeigh() throws Exception {
+        this.neighborRMI = new ProcessInterface[neighborID.length];
+        for (int i = 0; i < neighborID.length; i++) {
+            //Obtenemos los RMI de nuestros vecinos para uso posterior.
+            this.neighborRMI[i] = (ProcessInterface) Naming.lookup(String.valueOf(this.neighborID[i]));
+        }
     }
 
     //ELECTION NO ESTA TERMINADA; NO USAR.
     //Algoritmo de mensajes de exploracion/eleccion.
     public void Election(int callerMaxID, int callerID, int initID) throws Exception {
+        boolean newMax = false;
         if (callerMaxID > this.maxID) {
-            //Llego un nuevo maximo.
+            //Tu ID maxima es mayor a la mia, le avisare a todos mis vecinos menos a ti.
             this.maxID = callerMaxID;
-        }
-        if (!elected) {
-            elected = true;
-            //Construimos las interfaces de los vecinos y las guardamos para later use.
-            neighborRMI = new ProcessInterface[neighborID.length];
             for (int i = 0; i < neighborID.length; i++) {
-                neighborRMI[i] = (ProcessInterface) Naming.lookup(String.valueOf(neighborID[i]));
                 //No llamare a quien me llamo.
                 if (neighborID[i] == callerID) {
                     continue;
                 }
-                System.out.print(this.ID + ": Mandando mensajes con MaxID" + this.maxID + "\n");
-                neighborRMI[i].Election(this.maxID, this.ID, this.ID);
+                System.out.print(this.ID + ": Mandando mensajes con nueva MaxID " + this.maxID + " a " + neighborID[i] + "\n");
+                neighborRMI[i].Election(this.maxID, this.ID, initID);
             }
-            elected = true;
-        } else if (elected) {
-
+        } else if (callerMaxID < this.maxID){
+            //Tu ID maxima es menor a la mia, le avisare a todos.
+            maxIDcounter = 0;
+            for (int i = 0; i < neighborID.length; i++){
+                System.out.print(this.ID + ": Mandando mensajes con mi MaxID " + this.maxID + " a " + neighborID[i] + "\n");
+                neighborRMI[i].Election(this.maxID,this.maxID, initID);
+            }
+        }
+        if (callerMaxID == this.maxID){ //Si callerMaxID == this.maxID
+            maxIDcounter += 1;
+            System.out.print(this.ID + ": Me ha llamado " + callerID +" con mi misma maxID " + callerMaxID +", cuento "+maxIDcounter+"\n");
+            if (maxIDcounter == neighborID.length){
+                System.out.print(this.ID+ ": CREO que todos concordamos en "+ this.maxID +"\n");
+            }
         }
     }
 }
-        /*    elected = true;
-            if (callerMaxID > this.maxID){
-                this.maxID = callerMaxID;
-            }
-            for (int i = 0; i < neighborID.length; i++) {
-                if (neighborID[i] == callerID) {
-                    continue;
-                }
-                System.out.print(this.ID + ": Estoy llamando a "+neighborID[i]+"!!\n");
-                ProcessInterface neighborRmi = (ProcessInterface) (Naming.lookup(String.valueOf(neighborID[i])));
-                neighborRmi.Election(this.maxID, this.ID);
-            }
-        } else {
-            System.out.print(this.ID + "Creo que el coord. es "+this.maxID+"\n");
-        }
-}
-
-
-
 
 
 /*
