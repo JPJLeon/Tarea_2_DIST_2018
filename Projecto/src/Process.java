@@ -5,6 +5,7 @@ import java.rmi.server.*;
 import java.net.*;
 
 public class Process extends UnicastRemoteObject implements ProcessInterface {
+
     private int ID;
     private boolean elected;
     private boolean echoing;
