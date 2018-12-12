@@ -17,10 +17,7 @@ public class Main {
             process2.Election(6, 6, 6);
 
             //Representante
-            if(process1.ID == 20){
 
-                System.out.print("");
-            }
         } catch(Exception e){
             e.printStackTrace();
         }

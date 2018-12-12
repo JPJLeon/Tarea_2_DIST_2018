@@ -15,24 +15,26 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
     private ProcessInterface[] neighborRMI;
 
     //Inicializador, se crea el servidor RMI de este proceso.
-    public Process(int ID, int[] neighborID) throws Exception{
+    public Process(int ID, int[] neighborID) throws Exception {
         //Llamada al constructor y los metodos de la clase base (UnicastRemoteObject)
         super();
         this.ID = ID;
         this.maxID = ID;
         this.neighborID = neighborID;
         int port = 1200 + ID;
-        try{
-            //LocateRegistry.createRegistry(port);
-            Naming.rebind(String.valueOf(ID),this);
-        } catch (Exception e){e.printStackTrace();}
-        System.out.print("Proceso "+ID+" nuevo creado\n");
+        try {
+            LocateRegistry.createRegistry(port);
+            Naming.rebind(String.valueOf(ID), this);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        System.out.print("Proceso " + ID + " nuevo creado\n");
     }
 
     //ELECTION NO ESTA TERMINADA; NO USAR.
     //Algoritmo de mensajes de exploracion/eleccion.
     public void Election(int callerMaxID, int callerID, int initID) throws Exception {
-        if (callerMaxID > this.maxID){
+        if (callerMaxID > this.maxID) {
             //Llego un nuevo maximo.
             this.maxID = callerMaxID;
         }
@@ -43,18 +45,18 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
             for (int i = 0; i < neighborID.length; i++) {
                 neighborRMI[i] = (ProcessInterface) Naming.lookup(String.valueOf(neighborID[i]));
                 //No llamare a quien me llamo.
-                if (neighborID[i] == callerID){
+                if (neighborID[i] == callerID) {
                     continue;
                 }
-                System.out.print(this.ID+": Mandando mensajes con MaxID" + this.maxID+"\n");
+                System.out.print(this.ID + ": Mandando mensajes con MaxID" + this.maxID + "\n");
                 neighborRMI[i].Election(this.maxID, this.ID, this.ID);
             }
             elected = true;
-        } else if (elected){
+        } else if (elected) {
 
         }
     }
-
+}
         /*    elected = true;
             if (callerMaxID > this.maxID){
                 this.maxID = callerMaxID;
