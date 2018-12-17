@@ -13,10 +13,12 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
     public int maxIDcounter = 0;
 
     public int[] neighborID;
+    public String rutaArchivoCifrado;
+    public String ipServidor;
     private ProcessInterface[] neighborRMI;
 
     //Inicializador, se crea el servidor RMI de este proceso.
-    public Process(int ID, int[] neighborID) throws Exception {
+    public Process(int ID, int[] neighborID, boolean candidato) throws Exception {
         //Llamada al constructor y los metodos de la clase base (UnicastRemoteObject)
         super();
         this.ID = ID;
@@ -28,6 +30,24 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
             Naming.rebind(String.valueOf(ID), this);
         } catch (Exception e) { e.printStackTrace(); }
         System.out.print("Proceso " + ID + " nuevo creado\n");
+    }
+
+    //constructor proceso candidato inicial
+    //NO TERMINADA
+    public Process(int ID, int[] neighborID, boolean candidato, String rutaArchivoCifrado, String ipServidor) throws Exception {
+        //Llamada al constructor y los metodos de la clase base (UnicastRemoteObject)
+        super();
+        this.ID = ID;
+        this.maxID = ID;
+        this.neighborID = neighborID;
+        int port = 1200 + ID;
+        try {
+            LocateRegistry.createRegistry(port);
+            Naming.rebind(String.valueOf(ID), this);
+        } catch (Exception e) { e.printStackTrace(); }
+        System.out.print("Proceso " + ID + " nuevo creado\n");
+        Election(-1, this.ID, this.ID);
+
     }
 
     public void lookForNeigh() throws Exception {
@@ -42,6 +62,7 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
     //Algoritmo de mensajes de exploracion/eleccion.
     public void Election(int callerMaxID, int callerID, int initID) throws Exception {
         boolean newMax = false;
+        lookForNeigh();
         if (callerMaxID > this.maxID) {
             //Tu ID maxima es mayor a la mia, le avisare a todos mis vecinos menos a ti.
             this.maxID = callerMaxID;
