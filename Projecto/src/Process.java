@@ -12,6 +12,7 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
     public int maxID = -1;
     public int maxIDcounter = 0;
 
+    private boolean candidato;
     public int[] neighborID;
     public String rutaArchivoCifrado;
     public String ipServidor;
@@ -24,6 +25,7 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
         this.ID = ID;
         this.maxID = ID;
         this.neighborID = neighborID;
+        this.candidato = candidato;
         int port = 1200 + ID;
         try {
             LocateRegistry.createRegistry(port);
@@ -65,7 +67,9 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
         lookForNeigh();
         if (callerMaxID > this.maxID) {
             //Tu ID maxima es mayor a la mia, le avisare a todos mis vecinos menos a ti.
+            System.out.print(this.ID + ": Proceso " +callerID + " me ha mandado una nueva maxID: " + callerMaxID +"\n");
             this.maxID = callerMaxID;
+            maxIDcounter = 0;
             for (int i = 0; i < neighborID.length; i++) {
                 //No llamare a quien me llamo.
                 if (neighborID[i] == callerID) {
@@ -73,16 +77,18 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
                 }
                 System.out.print(this.ID + ": Mandando mensajes con nueva MaxID " + this.maxID + " a " + neighborID[i] + "\n");
                 neighborRMI[i].Election(this.maxID, this.ID, initID);
+                if(this.maxID != callerMaxID) break;
             }
         } else if (callerMaxID < this.maxID){
             //Tu ID maxima es menor a la mia, le avisare a todos.
+            System.out.print(this.ID + ": Proceso " + callerID + " me ha mandado una maxID: " + callerMaxID +", la mia es: " +this.maxID + "\n"); //por lo que se la mando a todos
             maxIDcounter = 0;
             for (int i = 0; i < neighborID.length; i++){
                 System.out.print(this.ID + ": Mandando mensajes con mi MaxID " + this.maxID + " a " + neighborID[i] + "\n");
-                neighborRMI[i].Election(this.maxID,this.maxID, initID);
+                neighborRMI[i].Election(this.maxID,this.ID, initID);
+                if(this.maxID != this.ID) break;
             }
-        }
-        if (callerMaxID == this.maxID){ //Si callerMaxID == this.maxID
+        } else if (callerMaxID == this.maxID){ //Si callerMaxID == this.maxID
             maxIDcounter += 1;
             System.out.print(this.ID + ": Me ha llamado " + callerID +" con mi misma maxID " + callerMaxID +", cuento "+maxIDcounter+"\n");
             if (maxIDcounter == neighborID.length){
