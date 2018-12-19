@@ -49,7 +49,7 @@ public class Representative {
 
     // Busca la key para decifrar el msj
     public static void main(String[] args) {
-        Representative rep = new Representative("10.10.2.214", "/home/asantiba/Tarea_2_DIST_2018/proyecto_linux/Archivos cifrados/cifrado_grupo_14.txt");
+        Representative rep = new Representative("10.10.2.214", "/home/grupo14/proyecto_linux");
         rep.key = rep.search_key();
         System.out.print("La llave publica es: \n" + rep.key + "\n");
         try {
