@@ -5,18 +5,41 @@ import java.rmi.server.*;
 import java.net.*;
 
 public class Process extends UnicastRemoteObject implements ProcessInterface {
-
     private int ID;
     private boolean elected;
     private boolean echoing;
     public int maxID = -1;
-    public int maxIDcounter = 0;
+    private int maxIDcounter = 0;
+    private int echoCounter = 0;
 
+
+    private boolean candidato;
     public int[] neighborID;
+    public String rutaArchivoCifrado;
+    public String ipServidor;
     private ProcessInterface[] neighborRMI;
 
     //Inicializador, se crea el servidor RMI de este proceso.
-    public Process(int ID, int[] neighborID) throws Exception {
+    public Process(int ID, int[] neighborID, boolean candidato) throws Exception {
+        //Llamada al constructor y los metodos de la clase base (UnicastRemoteObject)
+        super();
+        this.ID = ID;
+        this.maxID = ID;
+        this.neighborID = neighborID;
+        this.candidato = candidato;
+        this.echoing = false;
+
+        int port = 1200 + ID;
+        try {
+            LocateRegistry.createRegistry(port);
+            Naming.rebind(String.valueOf(ID), this);
+        } catch (Exception e) { e.printStackTrace(); }
+        System.out.print("Proceso " + ID + " nuevo creado\n");
+    }
+
+    //constructor proceso candidato inicial
+    //NO TERMINADA
+    public Process(int ID, int[] neighborID, boolean candidato, String rutaArchivoCifrado, String ipServidor) throws Exception {
         //Llamada al constructor y los metodos de la clase base (UnicastRemoteObject)
         super();
         this.ID = ID;
@@ -28,6 +51,8 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
             Naming.rebind(String.valueOf(ID), this);
         } catch (Exception e) { e.printStackTrace(); }
         System.out.print("Proceso " + ID + " nuevo creado\n");
+        Election(-1, this.ID, this.ID);
+
     }
 
     public void lookForNeigh() throws Exception {
@@ -38,13 +63,16 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
         }
     }
 
-    //ELECTION NO ESTA TERMINADA; NO USAR.
     //Algoritmo de mensajes de exploracion/eleccion.
     public void Election(int callerMaxID, int callerID, int initID) throws Exception {
+        echoCounter = 0;
         boolean newMax = false;
+        lookForNeigh();
         if (callerMaxID > this.maxID) {
             //Tu ID maxima es mayor a la mia, le avisare a todos mis vecinos menos a ti.
+            System.out.print(this.ID + ": Proceso " +callerID + " me ha mandado una nueva maxID: " + callerMaxID +"\n");
             this.maxID = callerMaxID;
+
             for (int i = 0; i < neighborID.length; i++) {
                 //No llamare a quien me llamo.
                 if (neighborID[i] == callerID) {
@@ -52,24 +80,61 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
                 }
                 System.out.print(this.ID + ": Mandando mensajes con nueva MaxID " + this.maxID + " a " + neighborID[i] + "\n");
                 neighborRMI[i].Election(this.maxID, this.ID, initID);
+                if(this.maxID != callerMaxID) break;
             }
         } else if (callerMaxID < this.maxID){
             //Tu ID maxima es menor a la mia, le avisare a todos.
+            System.out.print(this.ID + ": Proceso " + callerID + " me ha mandado una maxID: " + callerMaxID +", la mia es: " +this.maxID + "\n"); //por lo que se la mando a todos
             maxIDcounter = 0;
             for (int i = 0; i < neighborID.length; i++){
                 System.out.print(this.ID + ": Mandando mensajes con mi MaxID " + this.maxID + " a " + neighborID[i] + "\n");
-                neighborRMI[i].Election(this.maxID,this.maxID, initID);
+                neighborRMI[i].Election(this.maxID,this.ID, initID);
+                if(this.maxID != this.ID) break;
             }
-        }
-        if (callerMaxID == this.maxID){ //Si callerMaxID == this.maxID
+        } else if (callerMaxID == this.maxID){ //Si callerMaxID == this.maxID
             maxIDcounter += 1;
             System.out.print(this.ID + ": Me ha llamado " + callerID +" con mi misma maxID " + callerMaxID +", cuento "+maxIDcounter+"\n");
+
             if (maxIDcounter == neighborID.length){
-                System.out.print(this.ID+ ": CREO que todos concordamos en "+ this.maxID +"\n");
+                //Creo que concuerdo con mis vecinos, mandare Echos
+                this.echoing = true;
+                System.out.print(this.ID+ ":Comunicare que CREO que todos concordamos en "+ this.maxID +"\n");
+                for (int i = 0; i < neighborID.length; i++) {
+                    neighborRMI[i].Echo(this.maxID, this.ID, initID);
+                }
             }
         }
     }
-}
+
+    //Solo una Election deberia poder crear un nuevo Echo.
+    //Pero multiples Echos pueden crear otros Echos en nodos Electos.
+    public void Echo(int callerMaxID, int callerID, int initID) throws Exception{
+        if(neighborID.length == this.maxIDcounter && echoCounter < this.neighborID.length){
+            //Un vecino me mando un Echo, lo recordare si todos mis vecinos me respondieron eleccion.
+            echoCounter += 1;
+            System.out.print(this.ID + ": He recibido un Echo de " + callerID +" cuento " + this.echoCounter +"\n");
+        }
+
+        //Si todos mis vecinos me hicieron Echo y yo soy el init, tenemos el maxID.
+        if (this.ID == initID && this.echoCounter == this.neighborID.length){
+            System.out.print(this.ID + ": El representante es " + callerMaxID +"\n");
+        }
+        //Si todos mis vecinos me mandaron un elect, y he recibido echo de todos mis vecinos
+        //menos de 1, entro en Echo.
+        if (maxIDcounter == neighborID.length && echoCounter == neighborID.length-1){
+            if (callerMaxID == this.maxID) {
+                System.out.print(this.ID + ": Concuerdo con el Echo de MaxID: " + this.maxID +"\n");
+                for (int i = 0; i < neighborID.length; i++){
+                    if (neighborID[i] == callerID){
+                        continue;
+                    }
+                    neighborRMI[i].Echo(this.maxID, this.ID, initID);
+                }
+            }
+        }
+    }
+
+} //Class end
 
 
 /*
