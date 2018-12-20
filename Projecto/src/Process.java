@@ -1,6 +1,8 @@
 import java.rmi.*;
 import java.rmi.registry.*;
 import java.rmi.server.*;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import java.net.*;
 
@@ -12,7 +14,8 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
     private int maxIDcounter = 0;
     private int echoCounter = 0;
 
-
+    private int aliveCounter = 0;
+    private boolean escuchando = false;
     private boolean candidato;
     public int[] neighborID;
     public String rutaArchivoCifrado;
@@ -35,10 +38,10 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
             Naming.rebind(String.valueOf(ID), this);
         } catch (Exception e) { e.printStackTrace(); }
         System.out.print("Proceso " + ID + " nuevo creado\n");
+
     }
 
     //constructor proceso candidato inicial
-    //NO TERMINADA
     public Process(int ID, int[] neighborID, boolean candidato, String rutaArchivoCifrado, String ipServidor) throws Exception {
         //Llamada al constructor y los metodos de la clase base (UnicastRemoteObject)
         super();
@@ -52,6 +55,9 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
         } catch (Exception e) { e.printStackTrace(); }
         System.out.print("Proceso " + ID + " nuevo creado\n");
         Election(-1, this.ID, this.ID);
+        //notificar al resto del proceso representante
+
+        //createTimerTaskRepresentante(neighborRMI, neighborID, ID);
 
     }
 
@@ -61,6 +67,7 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
             //Obtenemos los RMI de nuestros vecinos para uso posterior.
             this.neighborRMI[i] = (ProcessInterface) Naming.lookup(String.valueOf(this.neighborID[i]));
         }
+
     }
 
     //Algoritmo de mensajes de exploracion/eleccion.
@@ -131,6 +138,57 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
                     neighborRMI[i].Echo(this.maxID, this.ID, initID);
                 }
             }
+        }
+    }
+
+    public void NotificarVecinos() throws Exception{
+        this.aliveCounter +=1;
+        System.out.println(this.ID + ": proceso ha sido notificado por el representante, aumentando el contador a: " + this.aliveCounter);
+    }
+
+    public void ReducirCounter() throws Exception{
+        this.aliveCounter -=1;
+        System.out.println(this.ID + ": ha pasado algo de tiempo, reduciendo mi contador a: " + this.aliveCounter);
+
+        if(aliveCounter < 0){
+            Election(-1, this.ID, this.ID);
+        }
+
+    }
+
+    //esto debe ser ejectutado por el representante una vez escogido y notificado
+    public void createTimerTaskRepresentante(ProcessInterface[] neighborRMI, int[] neighborID, int ID) throws Exception{
+        try {
+            TimerTask timerTask = new TimerTask(){
+                public void run(){ //Ejecucion
+                    for(int i = 0; i < neighborRMI.length; i++){
+                        System.out.println(ID + ": notificando al proceseo " + neighborID[i] + " de que sigo vivo");
+                        try{ neighborRMI[i].NotificarVecinos();}
+                        catch(Exception e){e.printStackTrace();}
+                    }
+                }
+            };
+            Timer timer = new Timer();
+            //Inicia la tarea, desde 0seg, cada 3seg
+            timer.scheduleAtFixedRate(timerTask, 0, 5000);
+        } catch(Exception ex) {ex.printStackTrace();
+        }
+
+    }
+
+    //esto debe ser ejecutado por los vecinos del representante una vez escogido y notificado
+    public void createTimerTaskVecino(ProcessInterface interfazPadre){
+        try {
+            TimerTask timerTask = new TimerTask(){
+                public void run(){ //Ejecucion
+                    try{interfazPadre.ReducirCounter();}
+                    catch (Exception e){e.printStackTrace();}
+                }
+            };
+            Timer timer = new Timer();
+            //Inicia la tarea, desde 0seg, cada 3seg
+            timer.scheduleAtFixedRate(timerTask, 0, 10000);
+        } catch(Exception ex) {ex.printStackTrace();
         }
     }
 
