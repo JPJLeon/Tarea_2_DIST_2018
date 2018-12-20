@@ -3,35 +3,36 @@ import java.rmi.registry.*;
 import java.rmi.server.*;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.*;
 
 import java.net.*;
 
 public class Process extends UnicastRemoteObject implements ProcessInterface {
     private int ID;
-    private boolean elected;
-    private boolean echoing;
     public int maxID = -1;
-    private int maxIDcounter = 0;
+    public boolean Representative;
+    private List<Integer> max_received_neighbors = new ArrayList<Integer>(); //Lista de los vecinos que ME ENVIARON el maxID
+    private List<Integer> max_send_neighbors = new ArrayList<Integer>(); //Lista de los vecinos que LE ENVIE el maxID
     private int echoCounter = 0;
 
     private int aliveCounter = 0;
     private boolean escuchando = false;
-    private boolean candidato;
+    private boolean initiator;
+
     public int[] neighborID;
     public String rutaArchivoCifrado;
     public String ipServidor;
     private ProcessInterface[] neighborRMI;
 
     //Inicializador, se crea el servidor RMI de este proceso.
-    public Process(int ID, int[] neighborID, boolean candidato) throws Exception {
+    public Process(int ID, int[] neighborID, boolean initiator) throws Exception {
         //Llamada al constructor y los metodos de la clase base (UnicastRemoteObject)
         super();
         this.ID = ID;
         this.maxID = ID;
         this.neighborID = neighborID;
-        this.candidato = candidato;
-        this.echoing = false;
-
+        this.initiator = initiator;
+        this.Representative = false;
         int port = 1200 + ID;
         try {
             LocateRegistry.createRegistry(port);
@@ -42,22 +43,25 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
     }
 
     //constructor proceso candidato inicial
-    public Process(int ID, int[] neighborID, boolean candidato, String rutaArchivoCifrado, String ipServidor) throws Exception {
+    //NO TERMINADA
+    public Process(int ID, int[] neighborID, boolean initiator, String rutaArchivoCifrado, String ipServidor) throws Exception {
         //Llamada al constructor y los metodos de la clase base (UnicastRemoteObject)
         super();
         this.ID = ID;
         this.maxID = ID;
         this.neighborID = neighborID;
+        this.initiator = initiator;
+        this.Representative = false;
         int port = 1200 + ID;
         try {
             LocateRegistry.createRegistry(port);
             Naming.rebind(String.valueOf(ID), this);
         } catch (Exception e) { e.printStackTrace(); }
-        System.out.print("Proceso " + ID + " nuevo creado\n");
+        System.out.print("Proceso " + ID + " creado\n");
         Election(-1, this.ID, this.ID);
         //notificar al resto del proceso representante
 
-        //createTimerTaskRepresentante(neighborRMI, neighborID, ID);
+        //createTimerTaskRepresentante(neighborRMI, neighborID, ID); esto debe ser ejecutado por el proceso representante
 
     }
 
@@ -73,39 +77,58 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
     //Algoritmo de mensajes de exploracion/eleccion.
     public void Election(int callerMaxID, int callerID, int initID) throws Exception {
         echoCounter = 0;
-        boolean newMax = false;
         lookForNeigh();
+        //Tu ID max es mayor a la mia, le avisare a todos mis vecinos menos a ti.
         if (callerMaxID > this.maxID) {
-            //Tu ID maxima es mayor a la mia, le avisare a todos mis vecinos menos a ti.
-            System.out.print(this.ID + ": Proceso " +callerID + " me ha mandado una nueva maxID: " + callerMaxID +"\n");
+            System.out.print(this.ID + ": Proceso " +callerID + " me ha mandado una nueva MaxID:" + callerMaxID +"\n");
+            max_received_neighbors = new ArrayList<Integer>(); //Lista vacia de los vecinos que ME ENVIARON el maxID
+            max_send_neighbors = new ArrayList<Integer>(); //Lista vacia de los vecinos que LE ENVIE el maxID
             this.maxID = callerMaxID;
 
             for (int i = 0; i < neighborID.length; i++) {
                 //No llamare a quien me llamo.
                 if (neighborID[i] == callerID) {
+                    max_received_neighbors.add(callerID); // Guardo quien me envio nuevo maxID
+                    if(max_received_neighbors.size() == neighborID.length){
+                        //Comienzo Eco
+                        System.out.print(this.ID+ ": Todos mis vecinos me enviaron el mismo MaxID\n");
+                        System.out.print(this.ID+ ": Comienzo ECO con MaxID:"+ this.maxID +"\n");
+                        for (int j = 0; j < neighborID.length; j++) {
+                            neighborRMI[j].Echo(this.maxID, this.ID, initID);
+                        }
+                        break;
+                    }
                     continue;
                 }
-                System.out.print(this.ID + ": Mandando mensajes con nueva MaxID " + this.maxID + " a " + neighborID[i] + "\n");
+                max_send_neighbors.add(neighborID[i]);
+                System.out.print(this.ID + ": Mandando nueva MaxID:" + this.maxID + " a Proceso " + neighborID[i] + "\n");
                 neighborRMI[i].Election(this.maxID, this.ID, initID);
-                if(this.maxID != callerMaxID) break;
+                //if(this.maxID != callerMaxID) break;
             }
-        } else if (callerMaxID < this.maxID){
-            //Tu ID maxima es menor a la mia, le avisare a todos.
-            System.out.print(this.ID + ": Proceso " + callerID + " me ha mandado una maxID: " + callerMaxID +", la mia es: " +this.maxID + "\n"); //por lo que se la mando a todos
-            maxIDcounter = 0;
+        }
+        //Tu ID maxima es menor a la mia, le avisare a todos los vecinos, MENOS a los que ya les avise
+        else if (callerMaxID < this.maxID){
+            if(!this.initiator){
+                System.out.print(this.ID + ": Proceso " + callerID + " me ha mandado una MaxID:" + callerMaxID +" menor, la mia es: " +this.maxID + "\n"); //por lo que se la mando a todos
+            }
             for (int i = 0; i < neighborID.length; i++){
-                System.out.print(this.ID + ": Mandando mensajes con mi MaxID " + this.maxID + " a " + neighborID[i] + "\n");
+                // Si quien me llamo me envio el maxID o ya se lo envie a este vecino, no le envio mi maxID
+                if(max_received_neighbors.contains(neighborID[i]) || max_send_neighbors.contains(neighborID[i])){
+                   continue;
+                }
+                System.out.print(this.ID + ": Mandando mensaje con mi MaxID:" + this.maxID + " a Proceso " + neighborID[i] + "\n");
                 neighborRMI[i].Election(this.maxID,this.ID, initID);
-                if(this.maxID != this.ID) break;
+                //if(this.maxID != this.ID) break;
             }
-        } else if (callerMaxID == this.maxID){ //Si callerMaxID == this.maxID
-            maxIDcounter += 1;
-            System.out.print(this.ID + ": Me ha llamado " + callerID +" con mi misma maxID " + callerMaxID +", cuento "+maxIDcounter+"\n");
+        }
+        //Si callerMaxID == this.maxID se aumenta en 1 el contador, cuando el contador es igual al nro de vecinos, inicia ECO
+        else if (callerMaxID == this.maxID){
+            max_received_neighbors.add(callerID); // Guardo quien me envio nuevo maxID
+            System.out.print(this.ID + ": Proceso " + callerID +" ha mandado mi misma MaxID:" + callerMaxID +", cuento " + max_received_neighbors.size() + "\n");
 
-            if (maxIDcounter == neighborID.length){
-                //Creo que concuerdo con mis vecinos, mandare Echos
-                this.echoing = true;
-                System.out.print(this.ID+ ":Comunicare que CREO que todos concordamos en "+ this.maxID +"\n");
+            if (max_received_neighbors.size() == neighborID.length){
+                //Comienzo Eco
+                System.out.print(this.ID+ ":Todos mis vecinos me enviaron el mismo MaxID, comienzo ECO con MaxID:"+ this.maxID +"\n");
                 for (int i = 0; i < neighborID.length; i++) {
                     neighborRMI[i].Echo(this.maxID, this.ID, initID);
                 }
@@ -113,30 +136,34 @@ public class Process extends UnicastRemoteObject implements ProcessInterface {
         }
     }
 
-    //Solo una Election deberia poder crear un nuevo Echo.
-    //Pero multiples Echos pueden crear otros Echos en nodos Electos.
+    //Retorna el MaxID al futuro representante
     public void Echo(int callerMaxID, int callerID, int initID) throws Exception{
-        if(neighborID.length == this.maxIDcounter && echoCounter < this.neighborID.length){
-            //Un vecino me mando un Echo, lo recordare si todos mis vecinos me respondieron eleccion.
-            echoCounter += 1;
-            System.out.print(this.ID + ": He recibido un Echo de " + callerID +" cuento " + this.echoCounter +"\n");
+        // Si el MaxID recibido es menor al que poseo, anulo el eco
+        if(callerMaxID < this.maxID){
+            return;
         }
 
-        //Si todos mis vecinos me hicieron Echo y yo soy el init, tenemos el maxID.
-        if (this.ID == initID && this.echoCounter == this.neighborID.length){
-            System.out.print(this.ID + ": El representante es " + callerMaxID +"\n");
+        // Si el MaxID recibido es mayor al que poseo, esto NO deberia pasar
+        else if (callerMaxID > this.maxID){
+            System.out.print(this.ID + ": Error en el algoritmo \n");
         }
-        //Si todos mis vecinos me mandaron un elect, y he recibido echo de todos mis vecinos
-        //menos de 1, entro en Echo.
-        if (maxIDcounter == neighborID.length && echoCounter == neighborID.length-1){
-            if (callerMaxID == this.maxID) {
-                System.out.print(this.ID + ": Concuerdo con el Echo de MaxID: " + this.maxID +"\n");
-                for (int i = 0; i < neighborID.length; i++){
-                    if (neighborID[i] == callerID){
-                        continue;
-                    }
-                    neighborRMI[i].Echo(this.maxID, this.ID, initID);
+
+        // Si el MaxID recibido es igual al que poseo, continuo haciendo ECO hasta llegar al representante
+
+        if(callerMaxID == this.maxID) {
+            for(int i = 0; i < neighborID.length; i++){
+                // Si recibi un ECO de un proceso vecino, NO le envio el ECO
+                if(max_send_neighbors.contains(neighborID[i])){
+                    continue;
                 }
+                if(callerMaxID == this.ID){
+                    Representative = true;
+                    System.out.print(this.ID + ": Soy el Representante, arrodillense!!! \n");
+                    return;
+                }
+                System.out.print(this.ID + ": Proceso " + callerID + " me envio ECO de MaxID:" + this.maxID + "\n");
+                System.out.print(this.ID + ": Propago ECO de MaxID:" + this.maxID +" , a Proceso " + neighborID[i] + "\n");
+                neighborRMI[i].Echo(this.maxID, this.ID, initID);
             }
         }
     }
