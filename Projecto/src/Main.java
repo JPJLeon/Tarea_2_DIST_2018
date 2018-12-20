@@ -30,7 +30,7 @@ public class Main {
             process6.lookForNeigh();
             process7.lookForNeigh();
 
-            process1.Election(-1, 1, 1);
+            process5.Election(5, 5, 5);
             System.out.print(process1.maxID+" "+process2.maxID+" "+process3.maxID+" "+process4.maxID+" "+process5.maxID+" "+process6.maxID+" "+process7.maxID);
 
         } catch(Exception e){
