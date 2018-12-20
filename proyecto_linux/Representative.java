@@ -46,22 +46,5 @@ public class Representative {
         file.close();
         return line;
     }
-
-    // Busca la key para decifrar el msj
-    public static void main(String[] args) {
-        Representative rep = new Representative("10.10.2.214", "/home/grupo14/proyecto_linux");
-        rep.key = rep.search_key();
-        System.out.print("La llave publica es: \n" + rep.key + "\n");
-        try {
-            rep.line = rep.read_file();
-            System.out.print("El texto cifrado es: \n" + rep.line + "\n");
-            rep.line = rep.decipher(rep.line, rep.key);
-            System.out.print("El texto descifrado es: \n" + rep.line + "\n");
-
-            System.out.print("El texto se envió a los demás procesos");
-        } catch(Exception  e) {
-            e.printStackTrace();
-        }
-    }
 }
 
