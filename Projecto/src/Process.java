@@ -7,6 +7,8 @@ import java.util.*;
 
 import java.net.*;
 
+// Implementacion de interfaz usada por cliente
+
 public class Process extends UnicastRemoteObject implements ProcessInterface {
     private int ID;
     public int maxID = -1;
